@@ -1,0 +1,73 @@
+/* ============================================================
+   CHATAPP — Light Theme
+   
+   A clean, airy light theme with subtle blue accents.
+   Uses oklch color space for perceptually uniform colors.
+   ============================================================ */
+
+:root {
+  /* ── Core ── */
+  --background: oklch(0.985 0.002 247);
+  --foreground: oklch(0.145 0.005 247);
+
+  /* ── Cards & Popovers ── */
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0.005 247);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0.005 247);
+
+  /* ── Primary (Deep Indigo) ── */
+  --primary: oklch(0.45 0.18 264);
+  --primary-foreground: oklch(0.985 0.002 247);
+
+  /* ── Secondary ── */
+  --secondary: oklch(0.955 0.015 264);
+  --secondary-foreground: oklch(0.25 0.06 264);
+
+  /* ── Muted ── */
+  --muted: oklch(0.96 0.008 264);
+  --muted-foreground: oklch(0.50 0.02 264);
+
+  /* ── Accent ── */
+  --accent: oklch(0.94 0.025 264);
+  --accent-foreground: oklch(0.25 0.06 264);
+
+  /* ── Destructive ── */
+  --destructive: oklch(0.577 0.245 27.325);
+
+  /* ── Borders & Inputs ── */
+  --border: oklch(0.90 0.01 264);
+  --input: oklch(0.92 0.008 264);
+  --ring: oklch(0.55 0.15 264);
+
+  /* ── Charts ── */
+  --chart-1: oklch(0.55 0.20 264);
+  --chart-2: oklch(0.60 0.18 180);
+  --chart-3: oklch(0.65 0.15 145);
+  --chart-4: oklch(0.70 0.12 50);
+  --chart-5: oklch(0.58 0.22 330);
+
+  /* ── Radius ── */
+  --radius: 0.625rem;
+
+  /* ── Sidebar ── */
+  --sidebar: oklch(0.975 0.005 264);
+  --sidebar-foreground: oklch(0.145 0.005 247);
+  --sidebar-primary: oklch(0.45 0.18 264);
+  --sidebar-primary-foreground: oklch(0.985 0.002 247);
+  --sidebar-accent: oklch(0.94 0.025 264);
+  --sidebar-accent-foreground: oklch(0.25 0.06 264);
+  --sidebar-border: oklch(0.90 0.01 264);
+  --sidebar-ring: oklch(0.55 0.15 264);
+
+  /* ── Chat-Specific ── */
+  --chat-bg: oklch(0.975 0.005 264);
+  --chat-bubble-own: oklch(0.45 0.18 264);
+  --chat-bubble-own-text: oklch(0.985 0 0);
+  --chat-bubble-other: oklch(0.955 0.015 264);
+  --chat-bubble-other-text: oklch(0.20 0.02 264);
+  --chat-input-bg: oklch(1 0 0);
+  --chat-timestamp: oklch(0.60 0.02 264);
+  --chat-online: oklch(0.65 0.20 145);
+  --chat-header-bg: oklch(1 0 0 / 80%);
+}

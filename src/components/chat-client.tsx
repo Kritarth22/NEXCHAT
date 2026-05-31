@@ -11,6 +11,7 @@ import {
   Window,
 } from "stream-chat-react";
 import ChatLayout from "./chat-layout";
+import { MessageSquare } from "lucide-react";
 
 type Props = {
   userId: string;
@@ -68,7 +69,16 @@ export default function ChatClient({
   };
 
   if (!client) {
-    return <div>Loading Chat...</div>;
+    return (
+      <div className="h-screen flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-10 w-10 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+          <p className="text-muted-foreground text-sm font-medium">
+            Connecting to chat...
+          </p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -87,8 +97,18 @@ export default function ChatClient({
             </Window>
           </Channel>
         ) : (
-          <div className="h-screen flex items-center justify-center text-zinc-400">
-            Select a user to start chatting
+          <div className="h-screen flex flex-col items-center justify-center gap-4 text-muted-foreground">
+            <div className="h-16 w-16 rounded-2xl bg-muted flex items-center justify-center">
+              <MessageSquare className="h-8 w-8 text-primary/60" />
+            </div>
+            <div className="text-center">
+              <p className="text-foreground font-semibold text-lg">
+                No conversation selected
+              </p>
+              <p className="text-muted-foreground text-sm mt-1">
+                Select a user from the sidebar to start chatting
+              </p>
+            </div>
           </div>
         )}
       </Chat>
