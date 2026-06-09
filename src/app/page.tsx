@@ -19,7 +19,7 @@ export default async function Home() {
 
             <div className="text-center">
               <h1 className="text-2xl font-bold text-foreground tracking-tight">
-                Welcome to CHATAPP
+                Welcome to NEXCHAT
               </h1>
               <p className="text-muted-foreground mt-2">
                 Sign in to start chatting with your friends

@@ -51,7 +51,7 @@ export default function Sidebar({
         <div className="flex items-center gap-2">
           <MessageSquare className="h-5 w-5 text-primary" />
           <h1 className="text-lg font-bold text-foreground tracking-tight">
-            CHATAPP
+            NEXCHAT
           </h1>
         </div>
         <ThemeToggle />
