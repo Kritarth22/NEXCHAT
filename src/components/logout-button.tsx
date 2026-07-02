@@ -8,8 +8,8 @@ export function LogoutButton() {
   return (
     <Button
       onClick={() => signOut()}
-      variant="destructive"
-      className="w-full gap-2"
+      variant="ghost"
+      className="w-full gap-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
       id="logout-btn"
     >
       <LogOut className="h-4 w-4" />

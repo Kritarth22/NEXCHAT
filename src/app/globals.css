@@ -73,3 +73,136 @@
     @apply font-sans;
   }
 }
+
+/* ── Smooth Theme Transitions ── */
+*,
+*::before,
+*::after {
+  transition-property: background-color, border-color, color, box-shadow;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 200ms;
+}
+
+/* Exclude animations from theme transition to prevent jank */
+.animate-spin,
+.animate-pulse,
+.animate-bounce {
+  transition-property: none !important;
+}
+
+/* ── Custom Scrollbar ── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--muted-foreground);
+  border-radius: 9999px;
+  opacity: 0.3;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  opacity: 0.5;
+}
+
+/* Firefox scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--muted-foreground) transparent;
+}
+
+/* ── Stream Chat Custom Skin Overrides ── */
+.str-chat {
+  /* Accent Colors */
+  --str-chat__accent-primary: var(--primary) !important;
+  --str-chat__brand-500: var(--primary) !important;
+  --str-chat__brand-600: var(--primary) !important;
+  --str-chat__brand-400: var(--primary) !important;
+  --str-chat__brand-300: var(--primary) !important;
+
+  /* Typography / Text Colors */
+  --str-chat__text-primary: var(--foreground) !important;
+  --str-chat__text-secondary: var(--muted-foreground) !important;
+  --str-chat__text-tertiary: var(--muted-foreground) !important;
+  --str-chat__input-text-default: var(--foreground) !important;
+  --str-chat__input-text-placeholder: var(--muted-foreground) !important;
+
+  /* Message Bubble Colors */
+  --str-chat__chat-bg-outgoing: var(--chat-bubble-own) !important;
+  --str-chat__chat-text-outgoing: var(--chat-bubble-own-text) !important;
+  --str-chat__chat-bg-incoming: var(--chat-bubble-other) !important;
+  --str-chat__chat-text-incoming: var(--chat-bubble-other-text) !important;
+  --str-chat__chat-border-outgoing: transparent !important;
+  --str-chat__chat-border-incoming: transparent !important;
+
+  /* Surfaces & Backgrounds */
+  --str-chat__background-core-app: var(--background) !important;
+  --str-chat__background-core-elevation-0: var(--background) !important;
+  --str-chat__background-core-elevation-1: var(--chat-bg) !important;
+  --str-chat__background-core-elevation-2: var(--card) !important;
+  --str-chat__background-core-surface-default: var(--chat-input-bg) !important;
+  --str-chat__background-core-surface-card: var(--card) !important;
+  --str-chat__background-core-surface-strong: var(--muted) !important;
+  --str-chat__chrome-0: var(--background) !important;
+  --str-chat__chrome-50: var(--muted) !important;
+  --str-chat__chrome-100: var(--muted) !important;
+  --str-chat__chrome-150: var(--border) !important;
+  --str-chat__chrome-200: var(--border) !important;
+
+  /* Borders & Dividers */
+  --str-chat__border-core-default: var(--border) !important;
+  --str-chat__border-core-subtle: var(--border) !important;
+  --str-chat__border-core-strong: var(--border) !important;
+
+  /* Header overrides */
+  --str-chat__header-background: var(--chat-header-bg) !important;
+}
+
+/* Custom styling to ensure the stream chat container fits the viewport */
+.str-chat-channel,
+.str-chat__container {
+  background-color: var(--chat-bg) !important;
+}
+
+.str-chat__header,
+.str-chat__channel-header {
+  background-color: var(--chat-header-bg) !important;
+  backdrop-filter: blur(8px) !important;
+  border-bottom: 1px solid var(--border) !important;
+}
+
+.str-chat__message-composer {
+  background-color: var(--chat-bg) !important;
+  border-top: 1px solid var(--border) !important;
+}
+
+.str-chat__input-flat {
+  background-color: var(--chat-input-bg) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius) !important;
+}
+
+/* ── Stream Chat additional dark-mode polish ── */
+.dark .str-chat__message-list {
+  background-color: var(--chat-bg) !important;
+}
+
+.dark .str-chat__list {
+  background-color: var(--chat-bg) !important;
+}
+
+/* Ensure popover menus match dark theme */
+.dark .str-chat__message-actions-box {
+  background-color: var(--card) !important;
+  border: 1px solid var(--border) !important;
+}
+
+/* Smoother message bubble corners */
+.str-chat .str-chat__message-bubble {
+  border-radius: calc(var(--radius) * 1.6) !important;
+}
