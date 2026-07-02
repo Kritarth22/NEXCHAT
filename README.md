@@ -1,39 +1,71 @@
 # NEXCHAT
 
-NEXCHAT is a real-time chat application built with Next.js and Stream Chat. It offers a fast, modern messaging experience with secure authentication, persistent user data, and a clean, responsive UI.
+**NEXCHAT** is a modern real-time chat application built with **Next.js**, **TypeScript**, **Prisma**, and **Stream Chat**. It delivers a fast, secure, and responsive messaging experience with authentication, persistent user data, and a clean, intuitive user interface.
 
-## Features
-- 🔒 **Authentication** — Secure sign-in powered by NextAuth, with user data persisted via Prisma
-- 💬 **Real-time messaging** — Instant, reliable chat powered by Stream Chat
-- 🎨 **Modern UI** — Built with Tailwind CSS, Radix UI, and shadcn/ui components
-- 🌗 **Dark/Light mode** — Theme switching via next-themes
-- ⚡ **Built on Next.js 16 & React 19** — Fast, server-rendered, and type-safe with TypeScript
+## 🚀 Live Demo
 
-## Tech Stack
-- **Framework:** Next.js, React
-- **Auth:** NextAuth.js, Prisma, `@auth/prisma-adapter`
-- **Chat engine:** Stream Chat (`stream-chat`, `stream-chat-react`)
-- **Styling/UI:** Tailwind CSS, Radix UI, shadcn/ui, lucide-react icons
-- **Language:** TypeScript
+**Live Website:** https://nexchat-xi.vercel.app/
 
-## Getting Started
+## ✨ Features
 
-1. Clone the repo:
-   \`\`\`bash
-   git clone https://github.com/Kritarth22/NEXCHAT.git
-   cd NEXCHAT
-   \`\`\`
-2. Install dependencies:
-   \`\`\`bash
-   npm install
-   \`\`\`
-3. Set up your environment variables (database URL, NextAuth secret, Stream Chat API key/secret, etc.) in a `.env` file.
-4. Run database migrations:
-   \`\`\`bash
-   npx prisma migrate dev
-   \`\`\`
-5. Start the dev server:
-   \`\`\`bash
-   npm run dev
-   \`\`\`
-6. Open [http://localhost:3000](http://localhost:3000) in your browser.
+* 🔐 **Secure Authentication** — User authentication powered by **NextAuth** with Prisma integration.
+* 💬 **Real-Time Messaging** — Instant messaging using **Stream Chat**.
+* 👥 **User Profiles** — Persistent user data stored with Prisma.
+* 🎨 **Modern & Responsive UI** — Built with **Tailwind CSS**, **shadcn/ui**, and **Radix UI**.
+* 🌙 **Dark / Light Theme** — Theme switching using **next-themes**.
+* ⚡ **Fast Performance** — Built with **Next.js 16**, **React 19**, and **TypeScript**.
+
+## 🛠️ Tech Stack
+
+* **Framework:** Next.js, React
+* **Language:** TypeScript
+* **Authentication:** NextAuth.js, Prisma, @auth/prisma-adapter
+* **Database ORM:** Prisma
+* **Real-Time Chat:** Stream Chat
+* **Styling:** Tailwind CSS, shadcn/ui, Radix UI
+* **Icons:** Lucide React
+
+## 📦 Getting Started
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/Kritarth22/NEXCHAT.git
+cd NEXCHAT
+```
+
+### 2. Install dependencies
+
+```bash
+npm install
+```
+
+### 3. Configure Environment Variables
+
+Create a `.env` file and add the required environment variables such as:
+
+* Database URL
+* NextAuth Secret
+* Stream Chat API Key
+* Stream Chat API Secret
+* Other required credentials
+
+### 4. Run Prisma Migrations
+
+```bash
+npx prisma migrate dev
+```
+
+### 5. Start the Development Server
+
+```bash
+npm run dev
+```
+
+Open **http://localhost:3000** in your browser.
+
+---
+
+## 📌 Project Status
+
+This project is currently under active development. More features and improvements will be added in future updates.
