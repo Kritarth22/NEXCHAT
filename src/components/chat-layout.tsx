@@ -8,6 +8,7 @@ type Props = {
   userImage?: string;
   userStatus?: string;
   onSelectUser: (userId: string) => void;
+  activeUserId?: string | null;
   onUpdateUserImage?: (imageUrl: string) => void;
   onUpdateUserName?: (name: string) => void;
   onUpdateUserStatus?: (status: string) => void;
@@ -20,6 +21,7 @@ export default function ChatLayout({
   userImage,
   userStatus,
   onSelectUser,
+  activeUserId,
   onUpdateUserImage,
   onUpdateUserName,
   onUpdateUserStatus,
@@ -42,6 +44,7 @@ export default function ChatLayout({
         userImage={userImage}
         userStatus={userStatus}
         onSelectUser={onSelectUser}
+        activeUserId={activeUserId}
         onUpdateUserImage={onUpdateUserImage}
         onUpdateUserName={onUpdateUserName}
         onUpdateUserStatus={onUpdateUserStatus}

@@ -35,8 +35,9 @@ function CustomChannelHeader() {
   const { displayImage, displayTitle } = useChannelPreviewInfo({ channel });
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
+  const currentUserId = channel?.getClient()?.userID;
   const typingArray = Object.values(typing).filter(
-    ({ parent_id }) => !parent_id
+    ({ parent_id, user }) => !parent_id && user?.id !== currentUserId
   );
   const isTyping = channelConfig?.typing_events !== false && typingArray.length > 0;
 
@@ -46,6 +47,7 @@ function CustomChannelHeader() {
     (m) => m.user_id !== channel?.getClient()?.userID
   );
   const otherUser = otherMember?.user;
+  const isOtherUserOnline = otherUser?.online && (otherUser as any)?.status !== "offline";
 
   return (
     <>
@@ -85,8 +87,8 @@ function CustomChannelHeader() {
                   </span>
                 ) : (
                   <>
-                    <span className={`h-1.5 w-1.5 rounded-full ${(otherUser as any)?.status === "offline" ? "bg-muted-foreground/60" : "bg-chat-online"}`} />
-                    <span className="capitalize">{(otherUser as any)?.status === "offline" ? "Offline" : "Online"}</span>
+                    <span className={`h-1.5 w-1.5 rounded-full ${!isOtherUserOnline ? "bg-muted-foreground/60" : "bg-chat-online"}`} />
+                    <span className="capitalize">{!isOtherUserOnline ? "Offline" : "Online"}</span>
                   </>
                 )}
               </span>
@@ -182,12 +184,17 @@ function ChatClientContent({
     );
   }
 
+  const activeUserId = activeChannel
+    ? Object.values(activeChannel.state.members).find((m) => m.user_id !== userId)?.user_id
+    : null;
+
   return (
     <ChatLayout
       userName={currentUserName}
       userImage={currentUserImage}
       userStatus={currentUserStatus}
       onSelectUser={handleSelectUser}
+      activeUserId={activeUserId}
       onUpdateUserImage={setCurrentUserImage}
       onUpdateUserName={setCurrentUserName}
       onUpdateUserStatus={setCurrentUserStatus}
