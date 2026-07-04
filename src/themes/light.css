@@ -70,4 +70,6 @@
   --chat-timestamp: oklch(0.60 0.02 264);
   --chat-online: oklch(0.65 0.20 145);
   --chat-header-bg: oklch(1 0 0 / 80%);
+
+  --chat-pinned-bg: oklch(0.94 0.04 264 / 70%);
 }

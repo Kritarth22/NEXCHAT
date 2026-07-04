@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { LogoutButton } from "./logout-button";
-import { ThemeToggle } from "./theme-toggle";
+import ActionMenu from "./action-menu";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -26,7 +26,9 @@ type Props = {
   userImage?: string;
   userStatus?: string;
   onSelectUser: (userId: string) => void;
+  onSelectChannel?: (channelId: string) => void;
   activeUserId?: string | null;
+  activeChannelId?: string | null;
   onUpdateUserImage?: (imageUrl: string) => void;
   onUpdateUserName?: (name: string) => void;
   onUpdateUserStatus?: (status: string) => void;
@@ -38,7 +40,9 @@ export default function Sidebar({
   userImage,
   userStatus,
   onSelectUser,
+  onSelectChannel,
   activeUserId,
+  activeChannelId,
   onUpdateUserImage,
   onUpdateUserName,
   onUpdateUserStatus,
@@ -258,9 +262,68 @@ export default function Sidebar({
     };
   }, [client]);
 
+  const [groups, setGroups] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (!client) return;
+
+    let active = true;
+
+    const fetchGroups = async () => {
+      try {
+        const filter = {
+          type: "messaging",
+          members: { $in: [client.userID!] },
+        };
+        const channelsList = await client.queryChannels(filter, { last_message_at: -1 }, {
+          watch: true,
+          state: true,
+        });
+
+        if (!active) return;
+
+        const groupChannels = channelsList.filter((ch) => {
+          const memberCount = Object.keys(ch.state.members).length;
+          const data = ch.data as any;
+          return data?.isGroup || data?.name || memberCount > 2;
+        });
+
+        setGroups(groupChannels);
+      } catch (err) {
+        console.error("Error querying groups:", err);
+      }
+    };
+
+    fetchGroups();
+
+    const handleEvent = (event: any) => {
+      if (!active) return;
+      if (
+        event.type === "notification.added_to_channel" ||
+        event.type === "channel.updated" ||
+        event.type === "message.new" ||
+        event.type === "channel.created"
+      ) {
+        fetchGroups();
+      }
+    };
+
+    const { unsubscribe } = client.on(handleEvent);
+
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, [client]);
+
   const filteredUsers = users.filter((user) =>
     user.name?.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const filteredGroups = groups.filter((group) => {
+    const groupName = group.data?.name || "Unnamed Group";
+    return groupName.toLowerCase().includes(searchQuery.toLowerCase());
+  });
 
   return (
     <>
@@ -279,7 +342,7 @@ export default function Sidebar({
             </h1>
           </div>
           <div className="flex items-center gap-1.5">
-            <ThemeToggle />
+            <ActionMenu client={client} onSelectChannel={onSelectChannel} />
             <Button
               variant="ghost"
               size="icon"
@@ -417,6 +480,94 @@ export default function Sidebar({
             {filteredUsers.length === 0 && searchQuery && (
               <p className="text-muted-foreground text-sm text-center py-8">
                 No users found
+              </p>
+            )}
+
+            {/* Groups Section */}
+            <p className="text-muted-foreground text-[11px] uppercase font-semibold tracking-wider px-2 py-2 mt-4 flex items-center justify-between">
+              <span>Groups</span>
+              <Badge variant="secondary" className="ml-2 text-[10px] px-1.5 py-0">
+                {filteredGroups.length}
+              </Badge>
+            </p>
+
+            {filteredGroups.map((group) => {
+              const isActive = activeChannelId === group.id;
+              const groupName = group.data?.name || "Unnamed Group";
+              const groupImage = group.data?.image;
+              const unreadCount = group.state.unreadCount || 0;
+              const lastMessage = group.state.messages[group.state.messages.length - 1];
+
+              return (
+                <button
+                  key={group.id}
+                  onClick={() => {
+                    if (onSelectChannel) {
+                      onSelectChannel(group.id);
+                    }
+                    setIsOpen(false);
+                  }}
+                  className={cn(
+                    "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors duration-150 group",
+                    isActive
+                      ? "bg-accent text-primary"
+                      : "hover:bg-accent"
+                  )}
+                  id={`group-item-${group.id}`}
+                >
+                  <div className="relative shrink-0">
+                    <Avatar className={cn("h-9 w-9", isActive && "ring-2 ring-primary/30")}>
+                      <AvatarImage src={groupImage || ""} alt={groupName} />
+                      <AvatarFallback className="bg-secondary text-secondary-foreground text-sm">
+                        {groupName.charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                  </div>
+
+                  <div className="text-left flex-1 min-w-0">
+                    <p className={cn(
+                      "text-sm font-medium truncate transition-colors",
+                      isActive ? "text-primary" : "text-foreground group-hover:text-primary",
+                      unreadCount > 0 && "font-semibold text-foreground"
+                    )}>
+                      {groupName}
+                    </p>
+                    <p className={cn(
+                      "text-xs truncate transition-colors",
+                      unreadCount > 0 ? "text-primary font-medium" : "text-muted-foreground"
+                    )}>
+                      {isActive
+                        ? "Active conversation"
+                        : unreadCount > 0
+                        ? `${unreadCount} unread message${unreadCount > 1 ? "s" : ""}`
+                        : lastMessage
+                        ? lastMessage.text || "Sent an attachment"
+                        : "Start chatting"}
+                    </p>
+                  </div>
+
+                  {unreadCount > 0 ? (
+                    <span className="flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold shrink-0 shadow-sm animate-pulse">
+                      {unreadCount}
+                    </span>
+                  ) : (
+                    isActive && (
+                      <span className="h-2 w-2 rounded-full bg-primary shrink-0" />
+                    )
+                  )}
+                </button>
+              );
+            })}
+
+            {groups.length === 0 && !searchQuery && (
+              <p className="text-muted-foreground text-[11px] text-center py-4 px-2 leading-relaxed">
+                No groups yet. Click the three-dot menu to create a group chat.
+              </p>
+            )}
+
+            {filteredGroups.length === 0 && searchQuery && (
+              <p className="text-muted-foreground text-sm text-center py-8">
+                No groups found
               </p>
             )}
           </div>

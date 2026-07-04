@@ -132,6 +132,9 @@
   --str-chat__input-text-default: var(--foreground) !important;
   --str-chat__input-text-placeholder: var(--muted-foreground) !important;
 
+  --str-chat__text-on-inverse: oklch(0.98 0 0) !important;
+
+
   /* Message Bubble Colors */
   --str-chat__chat-bg-outgoing: var(--chat-bubble-own) !important;
   --str-chat__chat-text-outgoing: var(--chat-bubble-own-text) !important;
@@ -161,6 +164,9 @@
 
   /* Header overrides */
   --str-chat__header-background: var(--chat-header-bg) !important;
+
+  /* Pinned message highlight (overrides library's default yellow tint) */
+  --str-chat__background-core-highlight: var(--chat-pinned-bg) !important;
 }
 
 /* Custom styling to ensure the stream chat container fits the viewport */
@@ -205,4 +211,29 @@
 /* Smoother message bubble corners */
 .str-chat .str-chat__message-bubble {
   border-radius: calc(var(--radius) * 1.6) !important;
+}
+
+/* Hide Commands, Poll, and Location options from the attachment selector menu */
+.str-chat__attachment-selector-actions-menu__commands-button,
+.str-chat__attachment-selector-actions-menu__create-poll-button,
+.str-chat__attachment-selector-actions-menu__add-location-button {
+  display: none !important;
+
+/* ── Resizable Thread Panel (desktop only) ── */
+@media (min-width: 768px) {
+  .str-chat__thread-container {
+    flex: 0 0 400px !important;
+    width: 400px !important;
+    min-width: 320px !important;
+    max-width: 720px !important;
+    resize: horizontal !important;
+    overflow: hidden auto !important;
+  }
+
+  .str-chat__container .str-chat__main-panel {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+  }
+}
+
 }

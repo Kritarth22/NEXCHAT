@@ -8,6 +8,7 @@ import {
   MessageList,
   MessageComposer,
   Window,
+  Thread,
   useChannelStateContext,
   useTypingContext,
   useChannelPreviewInfo,
@@ -16,7 +17,7 @@ import ChatLayout from "./chat-layout";
 import { MessageSquare, Menu } from "lucide-react";
 import { SidebarProvider, useSidebar } from "@/providers/sidebar-provider";
 import { Button } from "@/components/ui/button";
-import { ThemeToggle } from "./theme-toggle";
+import ActionMenu from "./action-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useTheme } from "next-themes";
 import ProfileModal from "./profile-modal";
@@ -37,17 +38,19 @@ function CustomChannelHeader() {
 
   const currentUserId = channel?.getClient()?.userID;
   const typingArray = Object.values(typing).filter(
-    ({ parent_id, user }) => !parent_id && user?.id !== currentUserId
+    ({ parent_id, user }) => !parent_id && user?.id !== currentUserId,
   );
-  const isTyping = channelConfig?.typing_events !== false && typingArray.length > 0;
+  const isTyping =
+    channelConfig?.typing_events !== false && typingArray.length > 0;
 
   // Get the other user's info from channel members
   const members = Object.values(channel?.state?.members || {});
   const otherMember = members.find(
-    (m) => m.user_id !== channel?.getClient()?.userID
+    (m) => m.user_id !== channel?.getClient()?.userID,
   );
   const otherUser = otherMember?.user;
-  const isOtherUserOnline = otherUser?.online && (otherUser as any)?.status !== "offline";
+  const isOtherUserOnline =
+    otherUser?.online && (otherUser as any)?.status !== "offline";
 
   return (
     <>
@@ -87,8 +90,12 @@ function CustomChannelHeader() {
                   </span>
                 ) : (
                   <>
-                    <span className={`h-1.5 w-1.5 rounded-full ${!isOtherUserOnline ? "bg-muted-foreground/60" : "bg-chat-online"}`} />
-                    <span className="capitalize">{!isOtherUserOnline ? "Offline" : "Online"}</span>
+                    <span
+                      className={`h-1.5 w-1.5 rounded-full ${!isOtherUserOnline ? "bg-muted-foreground/60" : "bg-chat-online"}`}
+                    />
+                    <span className="capitalize">
+                      {!isOtherUserOnline ? "Offline" : "Online"}
+                    </span>
                   </>
                 )}
               </span>
@@ -97,7 +104,7 @@ function CustomChannelHeader() {
         </div>
 
         <div className="flex items-center gap-2">
-          <ThemeToggle />
+          <ActionMenu client={channel?.getClient() || null} />
         </div>
       </div>
 
@@ -115,18 +122,16 @@ function CustomChannelHeader() {
   );
 }
 
-function ChatClientContent({
-  userId,
-  userName,
-  userImage,
-  userStatus,
-}: Props) {
+function ChatClientContent({ userId, userName, userImage, userStatus }: Props) {
   const [currentUserImage, setCurrentUserImage] = useState(userImage);
   const [currentUserName, setCurrentUserName] = useState(userName);
-  const [currentUserStatus, setCurrentUserStatus] = useState(userStatus || "online");
+  const [currentUserStatus, setCurrentUserStatus] = useState(
+    userStatus || "online",
+  );
   const [client, setClient] = useState<StreamChat | null>(null);
-  const [activeChannel, setActiveChannel] =
-    useState<StreamChannel | null>(null);
+  const [activeChannel, setActiveChannel] = useState<StreamChannel | null>(
+    null,
+  );
   const { toggle } = useSidebar();
   const { resolvedTheme } = useTheme();
 
@@ -136,7 +141,7 @@ function ChatClientContent({
       const { token } = await res.json();
 
       const chatClient = StreamChat.getInstance(
-        process.env.NEXT_PUBLIC_STREAM_API_KEY!
+        process.env.NEXT_PUBLIC_STREAM_API_KEY!,
       );
 
       await chatClient.connectUser(
@@ -146,7 +151,7 @@ function ChatClientContent({
           image: currentUserImage,
           status: currentUserStatus,
         } as any,
-        token
+        token,
       );
 
       setClient(chatClient);
@@ -171,6 +176,14 @@ function ChatClientContent({
     setActiveChannel(channel);
   };
 
+  const handleSelectChannel = async (channelId: string) => {
+    if (!client) return;
+
+    const channel = client.channel("messaging", channelId);
+    await channel.watch();
+    setActiveChannel(channel);
+  };
+
   if (!client) {
     return (
       <div className="h-screen flex items-center justify-center bg-background">
@@ -185,7 +198,9 @@ function ChatClientContent({
   }
 
   const activeUserId = activeChannel
-    ? Object.values(activeChannel.state.members).find((m) => m.user_id !== userId)?.user_id
+    ? Object.values(activeChannel.state.members).find(
+        (m) => m.user_id !== userId,
+      )?.user_id
     : null;
 
   return (
@@ -194,13 +209,17 @@ function ChatClientContent({
       userImage={currentUserImage}
       userStatus={currentUserStatus}
       onSelectUser={handleSelectUser}
+      onSelectChannel={handleSelectChannel}
       activeUserId={activeUserId}
+      activeChannelId={activeChannel?.id || null}
       onUpdateUserImage={setCurrentUserImage}
       onUpdateUserName={setCurrentUserName}
       onUpdateUserStatus={setCurrentUserStatus}
       client={client}
     >
-      <div className={`flex-1 flex flex-col h-full overflow-hidden ${resolvedTheme === "dark" ? "str-chat__theme-dark" : "str-chat__theme-light"}`}>
+      <div
+        className={`flex-1 flex flex-col h-full overflow-hidden ${resolvedTheme === "dark" ? "str-chat__theme-dark" : "str-chat__theme-light"}`}
+      >
         <Chat client={client}>
           {activeChannel ? (
             <Channel channel={activeChannel}>
@@ -209,6 +228,7 @@ function ChatClientContent({
                 <MessageList />
                 <MessageComposer />
               </Window>
+              <Thread />
             </Channel>
           ) : (
             <div className="h-screen flex flex-col bg-chat-bg w-full">
@@ -224,9 +244,11 @@ function ChatClientContent({
                   >
                     <Menu className="h-5 w-5" />
                   </Button>
-                  <span className="font-semibold text-foreground text-sm">NEXCHAT</span>
+                  <span className="font-semibold text-foreground text-sm">
+                    NEXCHAT
+                  </span>
                 </div>
-                <ThemeToggle />
+                <ActionMenu client={client} onSelectChannel={handleSelectChannel} />
               </div>
 
               <div className="flex-1 flex flex-col items-center justify-center gap-4 text-muted-foreground p-6">
@@ -240,7 +262,11 @@ function ChatClientContent({
                   <p className="text-muted-foreground text-sm mt-1">
                     Select a user from the sidebar to start chatting
                   </p>
-                  <Button onClick={toggle} className="mt-4 md:hidden gap-2 shadow-sm rounded-lg" size="sm">
+                  <Button
+                    onClick={toggle}
+                    className="mt-4 md:hidden gap-2 shadow-sm rounded-lg"
+                    size="sm"
+                  >
                     <Menu className="h-4 w-4" />
                     Open User List
                   </Button>
