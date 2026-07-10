@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useEffect, useState } from "react";
@@ -14,13 +15,14 @@ import {
   useChannelPreviewInfo,
 } from "stream-chat-react";
 import ChatLayout from "./chat-layout";
-import { MessageSquare, Menu } from "lucide-react";
+import { MessageSquare, Menu, Users } from "lucide-react";
 import { SidebarProvider, useSidebar } from "@/providers/sidebar-provider";
 import { Button } from "@/components/ui/button";
 import ActionMenu from "./action-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useTheme } from "next-themes";
 import ProfileModal from "./profile-modal";
+import GroupProfileModal from "./group-profile-modal";
 
 type Props = {
   userId: string;
@@ -43,8 +45,10 @@ function CustomChannelHeader() {
   const isTyping =
     channelConfig?.typing_events !== false && typingArray.length > 0;
 
-  // Get the other user's info from channel members
   const members = Object.values(channel?.state?.members || {});
+  const isGroup = channel ? ((channel.data as any)?.isGroup || (channel.data as any)?.name || members.length > 2) : false;
+
+  // Get the other user's info from channel members
   const otherMember = members.find(
     (m) => m.user_id !== channel?.getClient()?.userID,
   );
@@ -88,6 +92,11 @@ function CustomChannelHeader() {
                   <span className="text-primary font-medium animate-pulse">
                     typing...
                   </span>
+                ) : isGroup ? (
+                  <>
+                    <Users className="h-3.5 w-3.5 text-muted-foreground/60" />
+                    <span>{members.length} members</span>
+                  </>
                 ) : (
                   <>
                     <span
@@ -108,16 +117,24 @@ function CustomChannelHeader() {
         </div>
       </div>
 
-      {/* Read-Only Profile Modal for the other user */}
-      <ProfileModal
-        isOpen={isProfileOpen}
-        onClose={() => setIsProfileOpen(false)}
-        userId={otherUser?.id || ""}
-        userName={otherUser?.name || displayTitle || "Unknown"}
-        userImage={otherUser?.image as string | undefined}
-        userStatus={(otherUser as any)?.status || "online"}
-        isReadOnly={true}
-      />
+      {/* Render appropriate profile modal */}
+      {isGroup ? (
+        <GroupProfileModal
+          isOpen={isProfileOpen}
+          onClose={() => setIsProfileOpen(false)}
+          channel={channel}
+        />
+      ) : (
+        <ProfileModal
+          isOpen={isProfileOpen}
+          onClose={() => setIsProfileOpen(false)}
+          userId={otherUser?.id || ""}
+          userName={otherUser?.name || displayTitle || "Unknown"}
+          userImage={otherUser?.image as string | undefined}
+          userStatus={(otherUser as any)?.status || "online"}
+          isReadOnly={true}
+        />
+      )}
     </>
   );
 }
