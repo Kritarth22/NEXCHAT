@@ -214,7 +214,13 @@ function ChatClientContent({ userId, userName, userImage, userStatus }: Props) {
     );
   }
 
-  const activeUserId = activeChannel
+  const isActiveChannelGroup = activeChannel
+    ? ((activeChannel.data as any)?.isGroup ||
+       (activeChannel.data as any)?.name ||
+       Object.keys(activeChannel.state.members).length > 2)
+    : false;
+
+  const activeUserId = activeChannel && !isActiveChannelGroup
     ? Object.values(activeChannel.state.members).find(
         (m) => m.user_id !== userId,
       )?.user_id
