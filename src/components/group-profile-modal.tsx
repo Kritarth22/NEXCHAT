@@ -16,8 +16,17 @@ import {
   Check,
   ChevronDown,
   ChevronUp,
+  Crown,
+  UserMinus,
+  MoreVertical,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 type User = {
   id: string;
@@ -44,6 +53,8 @@ export default function GroupProfileModal({
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isMembersOpen, setIsMembersOpen] = useState(true);
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const [tempAdminId, setTempAdminId] = useState<string>("");
+  const [memberIdsToRemove, setMemberIdsToRemove] = useState<string[]>([]);
 
   // Available users to add (non-members)
   const [availableUsers, setAvailableUsers] = useState<User[]>([]);
@@ -63,6 +74,11 @@ export default function GroupProfileModal({
       setSearchQuery("");
       setIsAddOpen(false);
       setIsMembersOpen(true);
+      
+      const createdById = (channel.data as any)?.created_by_id || (channel.data as any)?.created_by?.id;
+      const currentAdmin = (channel.data as any)?.admin_id || createdById || "";
+      setTempAdminId(currentAdmin);
+      setMemberIdsToRemove([]);
 
       const fetchAvailableUsers = async () => {
         setIsLoadingUsers(true);
@@ -87,6 +103,17 @@ export default function GroupProfileModal({
   if (!isOpen) return null;
 
   const currentMembers = Object.values(channel.state.members || {});
+  const createdById = (channel.data as any)?.created_by_id || (channel.data as any)?.created_by?.id;
+  
+  const currentAdminId = (channel.data as any)?.admin_id || createdById || "";
+  const currentUserId = channel.getClient().userID;
+  const isCurrentUserAdmin = currentUserId === currentAdminId;
+
+  const displayedMembers = currentMembers.filter(
+    (member) => member.user && !memberIdsToRemove.includes(member.user.id)
+  );
+
+  const adminUser = currentMembers.find((m) => m.user?.id === tempAdminId)?.user;
 
   const handleEditClick = (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent opening preview
@@ -141,6 +168,14 @@ export default function GroupProfileModal({
     );
   };
 
+  const handleMakeAdmin = (userId: string) => {
+    setTempAdminId(userId);
+  };
+
+  const handleRemoveMember = (userId: string) => {
+    setMemberIdsToRemove((prev) => [...prev, userId]);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -154,12 +189,18 @@ export default function GroupProfileModal({
     try {
       const nameChanged = tempName.trim() !== ((channel.data as any)?.name || "");
       const imageChanged = tempImage !== (channel.data as any)?.image;
+      const adminChanged = tempAdminId !== currentAdminId;
 
-      if (nameChanged || imageChanged) {
+      if (nameChanged || imageChanged || adminChanged) {
         await channel.update({
           name: tempName.trim(),
           image: tempImage,
+          admin_id: tempAdminId,
         } as any);
+      }
+
+      if (memberIdsToRemove.length > 0) {
+        await channel.removeMembers(memberIdsToRemove);
       }
 
       if (selectedUserIds.length > 0) {
@@ -227,7 +268,7 @@ export default function GroupProfileModal({
               </Avatar>
 
               {/* Edit Photo Icon Badge */}
-              {!isUploading && (
+              {!isUploading && isCurrentUserAdmin && (
                 <button
                   type="button"
                   onClick={handleEditClick}
@@ -245,7 +286,7 @@ export default function GroupProfileModal({
                 className="hidden"
                 accept="image/*"
                 onChange={handleFileChange}
-                disabled={isUploading || isSaving}
+                disabled={isUploading || isSaving || !isCurrentUserAdmin}
               />
             </div>
             <span className="text-[10px] text-muted-foreground">
@@ -263,9 +304,23 @@ export default function GroupProfileModal({
               onChange={(e) => setTempName(e.target.value)}
               placeholder="Enter group name"
               className="bg-muted/50 border-border h-10 text-sm"
-              disabled={isSaving}
+              disabled={isSaving || !isCurrentUserAdmin}
               required
             />
+            {/* Admin info */}
+            {adminUser && (
+              <div className="flex items-center gap-1.5 pt-1">
+                <Crown className="h-3 w-3 text-amber-400" />
+                <span className="text-[11px] text-muted-foreground">
+                  Created By:{" "}
+                  <span className="font-medium text-foreground/80">
+                    {adminUser.id === channel.getClient().userID
+                      ? "You"
+                      : adminUser.name || adminUser.id}
+                  </span>
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Current Members Section (Collapsible) */}
@@ -277,7 +332,7 @@ export default function GroupProfileModal({
             >
               <div className="flex items-center gap-2 text-foreground">
                 <Users className="h-4 w-4 text-muted-foreground" />
-                <span>Group Members ({currentMembers.length})</span>
+                <span>Group Members ({displayedMembers.length})</span>
               </div>
               {isMembersOpen ? (
                 <ChevronUp className="h-4 w-4 text-muted-foreground" />
@@ -288,7 +343,7 @@ export default function GroupProfileModal({
 
             {isMembersOpen && (
               <div className="p-2 border-t border-border bg-card divide-y divide-border/40 max-h-[160px] overflow-y-auto">
-                {currentMembers.map((member) => {
+                {displayedMembers.map((member) => {
                   const user = member.user;
                   if (!user) return null;
                   const isOnline = user.online && (user as any).status !== "offline";
@@ -305,25 +360,66 @@ export default function GroupProfileModal({
                           </AvatarFallback>
                         </Avatar>
                         <div className="flex flex-col min-w-0">
-                          <span className="text-xs font-medium truncate text-foreground">
-                            {/* {user.name} */}
-                            {user.id === channel.getClient().userID ? "You" : user.name}
-                          </span>
-                          {/* <span className="text-[9px] text-muted-foreground truncate">
-                            {user.id === channel.getClient().userID ? "You" : ""}
-                          </span> */}
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs font-medium truncate text-foreground">
+                              {user.id === channel.getClient().userID ? "You" : user.name}
+                            </span>
+                            {user.id === tempAdminId && (
+                              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[9px] font-semibold whitespace-nowrap">
+                                <Crown className="h-2.5 w-2.5" />
+                                Admin
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <span
-                          className={cn(
-                            "h-1.5 w-1.5 rounded-full",
-                            isOnline ? "bg-chat-online animate-pulse" : "bg-muted-foreground/60"
-                          )}
-                        />
-                        <span className="text-[10px] text-muted-foreground capitalize">
-                          {isOnline ? "Online" : "Offline"}
-                        </span>
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1">
+                          <span
+                            className={cn(
+                              "h-1.5 w-1.5 rounded-full",
+                              isOnline ? "bg-chat-online animate-pulse" : "bg-muted-foreground/60"
+                            )}
+                          />
+                          <span className="text-[10px] text-muted-foreground capitalize">
+                            {isOnline ? "Online" : "Offline"}
+                          </span>
+                        </div>
+
+                        {/* Member management dropdown for Admins */}
+                        {isCurrentUserAdmin && user.id !== tempAdminId && (user.id !== currentUserId || tempAdminId !== currentUserId) && (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 p-0 hover:bg-accent rounded-md text-muted-foreground hover:text-foreground cursor-pointer animate-in fade-in duration-200"
+                              >
+                                <MoreVertical className="h-3.5 w-3.5" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="min-w-[140px] z-[110]">
+                              {/* <DropdownMenuItem
+                                onClick={() => handleMakeAdmin(user.id)}
+                                className="cursor-pointer flex items-center gap-2 text-xs"
+                              >
+                                <Crown className="h-3.5 w-3.5 text-amber-500" />
+                                <span>Make Admin</span>
+                              </DropdownMenuItem> */}
+                              {user.id !== currentUserId && (
+                                <DropdownMenuItem
+                                  onClick={() => handleRemoveMember(user.id)}
+                                  className="cursor-pointer flex items-center gap-2 text-xs"
+                                  variant="destructive"
+                                >
+                                  <UserMinus className="h-3.5 w-3.5" />
+                                  <span>Remove</span>
+                                </DropdownMenuItem>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
                       </div>
                     </div>
                   );
@@ -332,115 +428,129 @@ export default function GroupProfileModal({
             )}
           </div>
 
-          {/* Add Members Section (Collapsible) */}
-          <div className="border border-border rounded-xl overflow-hidden bg-muted/10">
-            <button
-              type="button"
-              onClick={() => setIsAddOpen(!isAddOpen)}
-              className="w-full flex items-center justify-between p-3 text-sm font-semibold hover:bg-accent/40 transition-colors"
-            >
-              <div className="flex items-center gap-2 text-foreground">
-                <UserPlus className="h-4 w-4 text-muted-foreground" />
-                <span>Add Members {selectedUserIds.length > 0 && `(${selectedUserIds.length})`}</span>
-              </div>
-              {isAddOpen ? (
-                <ChevronUp className="h-4 w-4 text-muted-foreground" />
-              ) : (
-                <ChevronDown className="h-4 w-4 text-muted-foreground" />
-              )}
-            </button>
-
-            {isAddOpen && (
-              <div className="p-3 border-t border-border bg-card space-y-2">
-                <div className="relative">
-                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                  <Input
-                    placeholder="Search users..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-8 h-8 bg-muted/50 border-border text-xs"
-                    disabled={isSaving}
-                  />
+          {/* Add Members Section (Collapsible) - Admin Only */}
+          {isCurrentUserAdmin && (
+            <div className="border border-border rounded-xl overflow-hidden bg-muted/10">
+              <button
+                type="button"
+                onClick={() => setIsAddOpen(!isAddOpen)}
+                className="w-full flex items-center justify-between p-3 text-sm font-semibold hover:bg-accent/40 transition-colors"
+              >
+                <div className="flex items-center gap-2 text-foreground">
+                  <UserPlus className="h-4 w-4 text-muted-foreground" />
+                  <span>Add Members {selectedUserIds.length > 0 && `(${selectedUserIds.length})`}</span>
                 </div>
+                {isAddOpen ? (
+                  <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                ) : (
+                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                )}
+              </button>
 
-                <div className="border border-border rounded-lg bg-muted/10 divide-y divide-border/40 max-h-[160px] overflow-y-auto">
-                  {isLoadingUsers ? (
-                    <div className="flex items-center justify-center py-6 text-muted-foreground text-xs">
-                      <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
-                      Loading users...
-                    </div>
-                  ) : filteredAvailableUsers.length === 0 ? (
-                    <div className="text-center py-6 text-muted-foreground text-xs">
-                      No users available
-                    </div>
-                  ) : (
-                    filteredAvailableUsers.map((user) => {
-                      const isSelected = selectedUserIds.includes(user.id);
-                      return (
-                        <button
-                          key={user.id}
-                          type="button"
-                          onClick={() => toggleUserSelection(user.id)}
-                          disabled={isSaving}
-                          className={cn(
-                            "w-full flex items-center justify-between px-2.5 py-2 hover:bg-accent/40 transition-colors text-left",
-                            isSelected && "bg-primary/5"
-                          )}
-                        >
-                          <div className="flex items-center gap-2.5">
-                            <Avatar className="h-7 w-7">
-                              <AvatarImage src={user.image || ""} alt={user.name || ""} />
-                              <AvatarFallback className="bg-secondary text-secondary-foreground text-xs font-semibold">
-                                {user.name?.charAt(0).toUpperCase() || "?"}
-                              </AvatarFallback>
-                            </Avatar>
-                            <span className="text-xs font-medium text-foreground">{user.name}</span>
-                          </div>
+              {isAddOpen && (
+                <div className="p-3 border-t border-border bg-card space-y-2">
+                  <div className="relative">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                    <Input
+                      placeholder="Search users..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-8 h-8 bg-muted/50 border-border text-xs"
+                      disabled={isSaving}
+                    />
+                  </div>
 
-                          <div
+                  <div className="border border-border rounded-lg bg-muted/10 divide-y divide-border/40 max-h-[160px] overflow-y-auto">
+                    {isLoadingUsers ? (
+                      <div className="flex items-center justify-center py-6 text-muted-foreground text-xs">
+                        <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
+                        Loading users...
+                      </div>
+                    ) : filteredAvailableUsers.length === 0 ? (
+                      <div className="text-center py-6 text-muted-foreground text-xs">
+                        No users available
+                      </div>
+                    ) : (
+                      filteredAvailableUsers.map((user) => {
+                        const isSelected = selectedUserIds.includes(user.id);
+                        return (
+                          <button
+                            key={user.id}
+                            type="button"
+                            onClick={() => toggleUserSelection(user.id)}
+                            disabled={isSaving}
                             className={cn(
-                              "h-4 w-4 rounded border border-input flex items-center justify-center transition-all",
-                              isSelected
-                                ? "bg-primary border-primary text-primary-foreground"
-                                : "bg-background"
+                              "w-full flex items-center justify-between px-2.5 py-2 hover:bg-accent/40 transition-colors text-left",
+                              isSelected && "bg-primary/5"
                             )}
                           >
-                            {isSelected && <Check className="h-3 w-3 stroke-[3]" />}
-                          </div>
-                        </button>
-                      );
-                    })
-                  )}
+                            <div className="flex items-center gap-2.5">
+                              <Avatar className="h-7 w-7">
+                                <AvatarImage src={user.image || ""} alt={user.name || ""} />
+                                <AvatarFallback className="bg-secondary text-secondary-foreground text-xs font-semibold">
+                                  {user.name?.charAt(0).toUpperCase() || "?"}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span className="text-xs font-medium text-foreground">{user.name}</span>
+                            </div>
+
+                            <div
+                              className={cn(
+                                "h-4 w-4 rounded border border-input flex items-center justify-center transition-all",
+                                isSelected
+                                  ? "bg-primary border-primary text-primary-foreground"
+                                  : "bg-background"
+                              )}
+                            >
+                              {isSelected && <Check className="h-3 w-3 stroke-[3]" />}
+                            </div>
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
 
           {/* Action Buttons */}
           <div className="flex items-center justify-end gap-2 pt-2 border-t border-border mt-2">
-            <Button
-              type="button"
-              variant="ghost"
-              disabled={isSaving}
-              onClick={onClose}
-              className="rounded-lg h-9 text-sm"
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              disabled={isSaving || isUploading}
-              className="rounded-lg h-9 text-sm font-semibold shadow-sm px-4"
-            >
-              {isSaving ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Saving...
-                </>
-              ) : (
-                "Save Changes"
-              )}
-            </Button>
+            {isCurrentUserAdmin ? (
+              <>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  disabled={isSaving}
+                  onClick={onClose}
+                  className="rounded-lg h-9 text-sm"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isSaving || isUploading}
+                  className="rounded-lg h-9 text-sm font-semibold shadow-sm px-4"
+                >
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      Saving...
+                    </>
+                  ) : (
+                    "Save Changes"
+                  )}
+                </Button>
+              </>
+            ) : (
+              <Button
+                type="button"
+                onClick={onClose}
+                className="rounded-lg h-9 text-sm font-semibold shadow-sm px-4 bg-primary text-primary-foreground hover:bg-primary/95"
+              >
+                Close
+              </Button>
+            )}
           </div>
         </form>
 

@@ -19,6 +19,7 @@ import { MessageSquare, Menu, Users } from "lucide-react";
 import { SidebarProvider, useSidebar } from "@/providers/sidebar-provider";
 import { Button } from "@/components/ui/button";
 import ActionMenu from "./action-menu";
+import ChatActionMenu from "./chat-action-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useTheme } from "next-themes";
 import ProfileModal from "./profile-modal";
@@ -31,7 +32,12 @@ type Props = {
   userStatus?: string;
 };
 
-function CustomChannelHeader() {
+type CustomChannelHeaderProps = {
+  onSelectChannel?: (channelId: string) => void;
+  setActiveChannel?: (channel: StreamChannel | null) => void;
+};
+
+function CustomChannelHeader({ onSelectChannel, setActiveChannel }: CustomChannelHeaderProps) {
   const { toggle } = useSidebar();
   const { channel, channelConfig } = useChannelStateContext();
   const { typing = {} } = useTypingContext();
@@ -113,7 +119,13 @@ function CustomChannelHeader() {
         </div>
 
         <div className="flex items-center gap-2">
-          <ActionMenu client={channel?.getClient() || null} />
+          {channel && (
+            <ChatActionMenu
+              channel={channel}
+              onClearActiveChannel={() => setActiveChannel?.(null)}
+              onSelectChannel={onSelectChannel}
+            />
+          )}
         </div>
       </div>
 
@@ -247,7 +259,10 @@ function ChatClientContent({ userId, userName, userImage, userStatus }: Props) {
           {activeChannel ? (
             <Channel channel={activeChannel}>
               <Window>
-                <CustomChannelHeader />
+                <CustomChannelHeader
+                  onSelectChannel={handleSelectChannel}
+                  setActiveChannel={setActiveChannel}
+                />
                 <MessageList />
                 <MessageComposer />
               </Window>

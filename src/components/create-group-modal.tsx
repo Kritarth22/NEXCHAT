@@ -86,6 +86,7 @@ export default function CreateGroupModal({
         name: groupName.trim(),
         members: [client.userID!, ...selectedUserIds],
         isGroup: true,
+        admin_id: client.userID!,
       } as any);
 
       await channel.create();

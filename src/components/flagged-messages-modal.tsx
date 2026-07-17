@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { StreamChat } from "stream-chat";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { X, Flag, Loader2, ArrowRight, MessageSquareOff } from "lucide-react";
+import { X, Flag, Loader2, ArrowRight, MessageSquareOff, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 function formatRelativeTime(dateStr: string): string {
@@ -30,6 +30,7 @@ type FlaggedMessagesModalProps = {
   isOpen: boolean;
   onClose: () => void;
   client: StreamChat;
+  channelId?: string;          // when set, show only messages from this channel
   onSelectChannel?: (channelId: string) => void;
 };
 
@@ -37,11 +38,19 @@ export default function FlaggedMessagesModal({
   isOpen,
   onClose,
   client,
+  channelId,
   onSelectChannel,
 }: FlaggedMessagesModalProps) {
   const [flagged, setFlagged] = useState<any[]>([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      setCurrentIndex(0);
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -53,8 +62,13 @@ export default function FlaggedMessagesModal({
       try {
         let fetchedMessages: any[] = [];
         try {
+          // If a specific channel is requested, scope the search to it
+          const channelFilter = channelId
+            ? { cid: { $eq: `messaging:${channelId}` } }
+            : { members: { $in: [client.userID!] } };
+
           const searchResponse = await client.search(
-            { members: { $in: [client.userID!] } },
+            channelFilter,
             { pinned: true },
             { limit: 50 }
           );
@@ -71,16 +85,18 @@ export default function FlaggedMessagesModal({
           );
 
           const localMessages: any[] = [];
-          Object.values(client.activeChannels).forEach((channel) => {
-            if (channel.state?.pinnedMessages) {
-              channel.state.pinnedMessages.forEach((msg) => {
+          Object.values(client.activeChannels).forEach((ch) => {
+            // When channelId is given, only pull from that channel
+            if (channelId && ch.id !== channelId) return;
+            if (ch.state?.pinnedMessages) {
+              ch.state.pinnedMessages.forEach((msg) => {
                 localMessages.push({
                   ...msg,
                   channel: {
-                    id: channel.id,
-                    type: channel.type,
-                    data: channel.data,
-                    state: channel.state,
+                    id: ch.id,
+                    type: ch.type,
+                    data: ch.data,
+                    state: ch.state,
                   },
                 });
               });
@@ -105,14 +121,23 @@ export default function FlaggedMessagesModal({
     };
 
     loadFlaggedMessages();
-  }, [isOpen, client]);
+  }, [isOpen, client, channelId]);
 
   if (!isOpen) return null;
 
   const handleUnflag = async (message: any) => {
     try {
       await client.unpinMessage(message);
-      setFlagged((prev) => prev.filter((msg) => msg.id !== message.id));
+      setFlagged((prev) => {
+        const filtered = prev.filter((msg) => msg.id !== message.id);
+        setCurrentIndex((currIndex) => {
+          if (currIndex >= filtered.length) {
+            return Math.max(0, filtered.length - 1);
+          }
+          return currIndex;
+        });
+        return filtered;
+      });
     } catch (err) {
       console.error("Error unpinning message:", err);
       alert("Failed to unflag message.");
@@ -157,20 +182,30 @@ export default function FlaggedMessagesModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center sm:p-4 top-70">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-xs transition-opacity duration-300 animate-in fade-in duration-200"
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300 animate-in fade-in duration-200"
         onClick={onClose}
       />
 
-      {/* Container */}
-      <div className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden relative z-10 p-6 text-foreground flex flex-col gap-4 animate-in fade-in-50 zoom-in-95 duration-200 max-h-[85vh]">
+      {/* Dialog */}
+      <div className="bg-card border border-border rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-lg relative z-10 text-foreground flex flex-col animate-in fade-in-50 slide-in-from-bottom-4 sm:zoom-in-95 duration-200 max-h-[92svh] sm:max-h-[85vh]">
+
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-border/60 flex-shrink-0">
           <div className="flex items-center gap-2">
-            <Flag className="h-5 w-5 text-primary" />
-            <h2 className="text-lg font-bold tracking-tight">Flagged Messages</h2>
+            <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Flag className="h-4 w-4 text-primary" />
+            </div>
+            <div>
+              <h2 className="text-base font-bold tracking-tight leading-none">Flagged Messages</h2>
+              {!isLoading && !error && flagged.length > 0 && (
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  {currentIndex + 1} of {flagged.length}
+                </p>
+              )}
+            </div>
           </div>
           <Button
             variant="ghost"
@@ -182,84 +217,144 @@ export default function FlaggedMessagesModal({
           </Button>
         </div>
 
-        {/* Scrollable List */}
-        <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-3 min-h-[300px] max-h-[500px]">
+        {/* Content Area */}
+        <div className="flex-1 overflow-hidden flex flex-col min-h-0">
           {isLoading ? (
-            <div className="flex-1 flex flex-col items-center justify-center py-16 text-muted-foreground">
-              <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
+            <div className="flex-1 flex flex-col items-center justify-center py-20 text-muted-foreground gap-3">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
               <p className="text-sm font-medium animate-pulse">Fetching flagged messages...</p>
             </div>
           ) : error ? (
-            <div className="flex-1 flex flex-col items-center justify-center py-16 text-destructive">
+            <div className="flex-1 flex flex-col items-center justify-center py-20 text-destructive gap-2">
               <p className="text-sm font-medium">{error}</p>
             </div>
           ) : flagged.length === 0 ? (
-            <div className="flex-1 flex flex-col items-center justify-center py-16 text-muted-foreground text-center gap-3 animate-in fade-in duration-300">
-              <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center">
-                <MessageSquareOff className="h-6 w-6 text-muted-foreground/60" />
+            <div className="flex-1 flex flex-col items-center justify-center py-20 text-muted-foreground text-center gap-3 px-6 animate-in fade-in duration-300">
+              <div className="h-14 w-14 rounded-2xl bg-muted flex items-center justify-center shadow-inner">
+                <MessageSquareOff className="h-7 w-7 text-muted-foreground/60" />
               </div>
               <div>
                 <p className="font-semibold text-foreground text-base">No flagged messages</p>
-                <p className="text-xs text-muted-foreground max-w-xs mt-1 leading-relaxed">
-                  You can star/flag messages by pinning them in any conversation. Hover a message, click options, and pin it.
+                <p className="text-xs text-muted-foreground max-w-xs mt-1.5 leading-relaxed">
+                  Pin messages in any conversation to flag them for later. Hover a message, click the options menu, and select Pin.
                 </p>
               </div>
             </div>
           ) : (
-            flagged.map((item) => (
-              <div
-                key={item.id}
-                className="group border border-border/60 hover:border-border rounded-xl p-4 bg-muted/10 hover:bg-muted/20 flex flex-col gap-3 transition-all duration-200"
-              >
-                {/* Message Header */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Avatar className="h-6 w-6">
-                      <AvatarImage src={item.user?.image || ""} />
-                      <AvatarFallback className="bg-secondary text-secondary-foreground text-[10px]">
-                        {item.user?.name?.charAt(0).toUpperCase() || "?"}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="text-xs font-semibold text-foreground">
-                      {item.user?.name || "Unknown"}
-                    </span>
-                    <span className="text-[10px] text-muted-foreground">
-                      {formatMessageTime(item.created_at)}
-                    </span>
+            /* Single message card */
+            <div className="flex-1 overflow-y-auto px-5 py-4">
+              {(() => {
+                const item = flagged[currentIndex];
+                return (
+                  <div className="border border-border/60 rounded-xl bg-muted/10 flex flex-col gap-0 overflow-hidden animate-in fade-in zoom-in-98 duration-150">
+                    {/* Chat badge */}
+                    <div className="flex items-center justify-between px-4 pt-3 pb-2">
+                      <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1 rounded-full bg-primary/10 text-primary border border-primary/20">
+                        <Flag className="h-2.5 w-2.5" />
+                        {getChannelName(item.channel)}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground">
+                        {formatRelativeTime(item.created_at)}
+                      </span>
+                    </div>
+
+                    {/* Sender row */}
+                    <div className="flex items-center gap-2.5 px-4 pb-2">
+                      <Avatar className="h-7 w-7 ring-1 ring-border">
+                        <AvatarImage src={item.user?.image || ""} />
+                        <AvatarFallback className="bg-secondary text-secondary-foreground text-[10px] font-semibold">
+                          {item.user?.name?.charAt(0).toUpperCase() || "?"}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="text-sm font-semibold text-foreground">
+                        {item.user?.id === client.userID ? "You" : (item.user?.name || "Unknown")}
+                      </span>
+                    </div>
+
+                    {/* Message body */}
+                    <div className="px-4 pb-4">
+                      <p className="text-sm text-foreground/90 whitespace-pre-wrap break-words leading-relaxed bg-muted/30 rounded-lg p-3 border border-border/40">
+                        {getMessageText(item)}
+                      </p>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-border/50 bg-muted/5">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleUnflag(item)}
+                        className="h-8 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg"
+                      >
+                        Unflag
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => handleGoToChat(item)}
+                        className="h-8 text-xs gap-1.5 rounded-lg"
+                      >
+                        Go to chat
+                        <ArrowRight className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
                   </div>
-                  <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary">
-                    {getChannelName(item.channel)}
-                  </span>
-                </div>
-
-                {/* Message Content */}
-                <p className="text-sm text-foreground/90 whitespace-pre-wrap break-words leading-relaxed pl-1">
-                  {getMessageText(item)}
-                </p>
-
-                {/* Actions Row */}
-                <div className="flex items-center justify-end gap-2 mt-1 pt-2 border-t border-border/50">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => handleUnflag(item)}
-                    className="h-8 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg"
-                  >
-                    Unflag
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={() => handleGoToChat(item)}
-                    className="h-8 text-xs gap-1 rounded-lg shadow-xs"
-                  >
-                    Go to chat
-                    <ArrowRight className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              </div>
-            ))
+                );
+              })()}
+            </div>
           )}
         </div>
+
+        {/* Navigation Footer — only when there are messages */}
+        {!isLoading && !error && flagged.length > 0 && (
+          <div className="flex items-center justify-between px-5 py-3 border-t border-border/60 flex-shrink-0 bg-muted/5">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentIndex((i) => Math.max(0, i - 1))}
+              disabled={currentIndex === 0}
+              className={cn(
+                "h-9 gap-1.5 rounded-lg text-xs font-medium transition-all",
+                currentIndex === 0 && "opacity-40 cursor-not-allowed"
+              )}
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Previous
+            </Button>
+
+            {/* Dot indicators — max 7 dots, scroll beyond that */}
+            <div className="flex items-center gap-1.5">
+              {flagged.slice(0, 7).map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setCurrentIndex(i)}
+                  className={cn(
+                    "rounded-full transition-all duration-200",
+                    i === currentIndex
+                      ? "h-2 w-2 bg-primary"
+                      : "h-1.5 w-1.5 bg-muted-foreground/30 hover:bg-muted-foreground/60"
+                  )}
+                />
+              ))}
+              {flagged.length > 7 && (
+                <span className="text-[10px] text-muted-foreground ml-1">+{flagged.length - 7}</span>
+              )}
+            </div>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentIndex((i) => Math.min(flagged.length - 1, i + 1))}
+              disabled={currentIndex === flagged.length - 1}
+              className={cn(
+                "h-9 gap-1.5 rounded-lg text-xs font-medium transition-all",
+                currentIndex === flagged.length - 1 && "opacity-40 cursor-not-allowed"
+              )}
+            >
+              Next
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );
